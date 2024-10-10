@@ -5,11 +5,10 @@
 <div class="hero min-h-screen bg-base-200">
   <div class="hero-content text-center">
     <div class="max-w-lg">
-      <h1 class="text-5xl font-bold">Welcome!</h1>
-      <h1 class="text-5xl font-bold">Sveltekit-Base</h1>
-      <h1 class="text-5xl font-bold">template!</h1>
+      <h1 class="text-5xl font-bold">Affirmations</h1>
       <p class="py-6 text-lg">
-        This is a simple template that has localstorage authentication.
+        Welcome to your app that is all about affirmations and living the life
+        that you desire to live, not the one that you have been living.
       </p>
     </div>
   </div>
