@@ -5,7 +5,9 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"content:app": "node content.js --app",
+		"content:full": "node content.js --full"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.0.0",
@@ -18,6 +20,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"daisyui": "^4.12.13"
+		"daisyui": "^4.12.13",
+		"yargs": "^17.7.2"
 	}
 }
