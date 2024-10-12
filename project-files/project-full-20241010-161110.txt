@@ -1,0 +1,431 @@
+File: F:\sveltekit_projects\Affirmations\src\routes\+layout.svelte
+<script>import "../app.css";
+import Navbar from "../lib/components/Navbar.svelte";</script>
+
+<Navbar></Navbar>
+<slot></slot>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\+page.svelte
+<script>
+</script>
+
+<!-- Main Hero Section -->
+<div class="hero min-h-screen bg-base-200">
+  <div class="hero-content text-center">
+    <div class="max-w-lg">
+      <h1 class="text-5xl font-bold">Affirmations</h1>
+      <p class="py-6 text-lg">
+        Welcome to your app that is all about affirmations and living the life
+        that you desire to live, not the one that you have been living.
+      </p>
+    </div>
+  </div>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\affirmations\+page.svelte
+<script>
+</script>
+
+<div class="m-6">
+  <h1 class="text-4xl text-center font-black">Affirmations Page</h1>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\iam\+page.svelte
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\login\+page.svelte
+<script>
+  let username = "";
+  let password = "";
+  let errorMessage = "";
+  let successMessage = "";
+
+  // Function to handle login
+  function login() {
+    errorMessage = ""; // Reset any previous error message
+
+    // Retrieve users array from localStorage, or initialize it as an empty array
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+
+    // Check if a user with the entered username exists and if the password matches
+    const foundUser = users.find(
+      (user) => user.username === username && user.password === password
+    );
+
+    if (foundUser) {
+      // Save login status and username to localStorage
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("username", username); // Save username to localStorage
+
+      successMessage = "Login successful! Redirecting...";
+
+      setTimeout(() => {
+        window.location.href = "/"; // Redirect to the homepage
+      }, 2000); // 2-second delay before redirect
+    } else {
+      errorMessage = "Invalid username or password";
+    }
+  }
+</script>
+
+<!-- DaisyUI Toast Container -->
+<div aria-live="polite" class="toast toast-top toast-center z-50">
+  {#if successMessage}
+    <div class="alert alert-success">
+      <div>
+        <span>{successMessage}</span>
+      </div>
+    </div>
+  {/if}
+  {#if errorMessage}
+    <div class="alert alert-error">
+      <div>
+        <span>{errorMessage}</span>
+      </div>
+    </div>
+  {/if}
+</div>
+
+<!-- Login Form -->
+<div class="flex justify-center items-center min-h-screen">
+  <div class="card w-full max-w-sm">
+    <div class="card-body">
+      <h2 class="text-center text-2xl font-bold mb-6">Login</h2>
+
+      <form on:submit|preventDefault={login}>
+        <div class="form-control mb-4">
+          <label for="username" class="label">
+            <span class="label-text">Username</span>
+          </label>
+          <input
+            id="username"
+            type="text"
+            placeholder="Enter your username"
+            bind:value={username}
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <div class="form-control mb-6">
+          <label for="password" class="label">
+            <span class="label-text">Password</span>
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            bind:value={password}
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <div class="form-control">
+          <button type="submit" class="btn btn-primary w-full">Login</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\register\+page.svelte
+<script>
+  let username = "";
+  let password = "";
+  let errorMessage = "";
+  let successMessage = "";
+
+  // Function to handle user registration
+  function register() {
+    errorMessage = ""; // Reset any previous error message
+
+    // Check if username and password are provided
+    if (!username || !password) {
+      errorMessage = "Username and password are required";
+      return;
+    }
+
+    // Retrieve the users array from localStorage, or initialize an empty array
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+
+    // Check if the username already exists in the array of users
+    const userExists = users.some((user) => user.username === username);
+    if (userExists) {
+      errorMessage = "User is already registered";
+      return;
+    }
+
+    // Add the new user to the array and store it back in localStorage
+    users.push({ username, password });
+    localStorage.setItem("users", JSON.stringify(users));
+
+    // Show a success message using a DaisyUI toast
+    successMessage = "Registration successful! Redirecting to login...";
+
+    // Show the toast for a few seconds, then redirect to the login page
+    setTimeout(() => {
+      window.location.href = "/login"; // Redirect to the login page
+    }, 2000); // 2-second delay before redirect
+  }
+</script>
+
+<!-- DaisyUI Toast Container -->
+<div aria-live="polite" class="toast toast-top toast-center z-50">
+  {#if successMessage}
+    <div class="alert alert-success">
+      <div>
+        <span>{successMessage}</span>
+      </div>
+    </div>
+  {/if}
+  {#if errorMessage}
+    <div class="alert alert-error">
+      <div>
+        <span>{errorMessage}</span>
+      </div>
+    </div>
+  {/if}
+</div>
+
+<!-- Registration Form -->
+<div class="flex justify-center items-center min-h-screen">
+  <div class="card w-full max-w-sm">
+    <div class="card-body">
+      <h2 class="text-center text-2xl font-bold mb-6">Register</h2>
+
+      <form on:submit|preventDefault={register}>
+        <div class="form-control mb-4">
+          <label for="username" class="label">
+            <span class="label-text">Username</span>
+          </label>
+          <input
+            id="username"
+            type="text"
+            placeholder="Enter your username"
+            bind:value={username}
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <div class="form-control mb-6">
+          <label for="password" class="label">
+            <span class="label-text">Password</span>
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            bind:value={password}
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <div class="form-control">
+          <button type="submit" class="btn btn-primary w-full">
+            Register
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\lib\components\Icon.svelte
+<script>
+  export let iconPath = ""; // Path for the icon
+  export let showIcon = true; // Control whether the icon is displayed or not
+</script>
+
+{#if showIcon}
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    class="h-5 w-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d={iconPath}
+    />
+  </svg>
+{/if}
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\lib\components\Navbar.svelte
+<script>
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation"; // SvelteKit's client-side navigation
+
+  let isLoggedIn = false;
+  let isInitialized = false; // To ensure we don't render prematurely
+  let username = ""; // Store the username
+
+  // Client-side check using onMount (runs only on the client, not during SSR)
+  onMount(() => {
+    if (typeof window !== "undefined") {
+      const storedStatus = localStorage.getItem("isLoggedIn");
+      const storedUsername = localStorage.getItem("username"); // Retrieve username from localStorage
+
+      if (storedStatus === "true") {
+        isLoggedIn = true; // User is logged in
+        username = storedUsername; // Set the username
+      } else {
+        goto("/login"); // Redirect to login if not logged in
+      }
+      isInitialized = true; // Indicate that the login check is complete
+    }
+  });
+
+  // Handle logging out (clears the login state and redirects to login)
+  function logout() {
+    localStorage.removeItem("isLoggedIn"); // Clear login state
+    localStorage.removeItem("username"); // Clear the stored username
+    isLoggedIn = false; // Set local state to false
+    goto("/login"); // Redirect to login page
+  }
+
+  // Menu items definition
+  $: menuItems = [
+    {
+      name: "Home",
+      href: "/",
+      active: false,
+      visible: true,
+      icon: true,
+      iconPath: "",
+    }, // Always visible
+    {
+      name: "Affirmations",
+      href: "/affirmations",
+      active: false,
+      visible: true,
+      icon: true,
+      iconPath: "", // Add a real path here if necessary
+    }, // Always visible
+    {
+      name: "Login",
+      href: "/login",
+      active: false,
+      visible: !isLoggedIn,
+      iconPath: "", // No icon here
+    },
+    {
+      name: "Register",
+      href: "/register",
+      active: false,
+      visible: !isLoggedIn,
+      iconPath: "", // No icon here
+    },
+    {
+      name: "Logout",
+      href: "#",
+      active: false,
+      visible: isLoggedIn,
+      onClick: logout,
+      iconPath: "", // No icon here
+    },
+  ];
+
+  // Set active menu item by index
+  function setActive(index) {
+    menuItems = menuItems.map((item, i) => ({
+      ...item,
+      active: i === index, // Set the clicked item as active
+    }));
+  }
+
+  // Set active menu item based on URL
+  function setActiveByUrl(pathname) {
+    menuItems = menuItems.map((item) => ({
+      ...item,
+      active: item.href === pathname, // Set active based on the URL
+    }));
+  }
+</script>
+
+<div class="navbar bg-base-100 sticky top-0 z-50">
+  <a href="/" class="btn btn-ghost text-xl">Affirmations</a>
+
+  {#if isLoggedIn && username}
+    <!-- Move the username to the right using 'ml-auto' -->
+    <div class="ml-auto flex flex-row items-center">
+      <span class="font-bold">{username}</span>
+      <!-- <button on:click={logout} class="btn btn-ghost text-sm">Logout</button> -->
+    </div>
+  {/if}
+</div>
+
+<!-- Only render menu when login status is initialized -->
+{#if isInitialized}
+  <div class="btm-nav">
+    {#each menuItems as item, index}
+      {#if item.visible}
+        <!-- Render only items that are visible based on login status -->
+        <a
+          href={item.href}
+          class={item.active ? "active" : ""}
+          on:click={() => {
+            setActive(index);
+            if (item.onClick) item.onClick(); // Handle logout
+          }}
+        >
+          <!-- Display icon if available -->
+          {#if item.icon && item.iconPath}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d={item.iconPath}
+              />
+            </svg>
+          {/if}
+          <span class="btm-nav-label">{item.name}</span>
+        </a>
+      {/if}
+    {/each}
+  </div>
+{/if}
+
+
+
+==================================================
+

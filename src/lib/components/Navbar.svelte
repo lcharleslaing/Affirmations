@@ -41,8 +41,8 @@
       iconPath: "",
     }, // Always visible
     {
-      name: "Affirmations",
-      href: "/affirmations",
+      name: "I AM",
+      href: "/iam",
       active: false,
       visible: true,
       icon: true,

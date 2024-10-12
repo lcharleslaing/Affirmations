@@ -1,0 +1,95 @@
+File: F:\sveltekit_projects\Affirmations\src\routes\iam\+page.svelte
+<!-- src/routes/iam/+page.svelte -->
+<script>
+  import RecordAudio from "$lib/components/iam/RecordAudio.svelte";
+</script>
+
+<div>
+  <h1>Record and Process Your Affirmation</h1>
+  <RecordAudio />
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\iam\+server.js
+import fs from 'fs';
+import path from 'path';
+
+export const POST = async ({ request }) => {
+  const data = await request.formData();
+  const audioFile = data.get('file');
+  const title = data.get('title');
+  const artist = data.get('artist');
+  const timestamp = new Date().toISOString();
+
+  const filename = `${title}-${timestamp}.mp3`;
+
+  // Save the file to both directories
+  const filePath1 = path.join('E:/MyComposedSongs/00-AFFIRMATIONS/NewAffirmations', filename);
+  const filePath2 = path.join('C:/Users/lchar/Music/iTunes/iTunes Media/Automatically Add to Apple Music', filename);
+
+  const buffer = Buffer.from(await audioFile.arrayBuffer());
+
+  fs.writeFileSync(filePath1, buffer);
+  fs.writeFileSync(filePath2, buffer);
+
+  return new Response('File saved successfully');
+};
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\lib\components\iam\RecordAudio.svelte
+<script>
+  let mediaRecorder;
+  let audioChunks = [];
+  let isRecording = false;
+  let audioBlob;
+  let audioURL;
+  let audioTitle = "";
+  let artistName = "";
+  let recordingTime = new Date().toISOString();
+
+  function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+      isRecording = true;
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(audioChunks, { type: "audio/mp3" });
+        audioURL = URL.createObjectURL(audioBlob);
+        audioChunks = [];
+      };
+    });
+  }
+
+  function stopRecording() {
+    mediaRecorder.stop();
+    isRecording = false;
+  }
+</script>
+
+{#if isRecording}
+  <button on:click={stopRecording}>Stop Recording</button>
+{:else}
+  <button on:click={startRecording}>Start Recording</button>
+{/if}
+
+{#if audioURL}
+  <audio controls src={audioURL}></audio>
+  <input placeholder="Title" bind:value={audioTitle} />
+  <input placeholder="Artist" bind:value={artistName} />
+{/if}
+
+
+
+==================================================
+
