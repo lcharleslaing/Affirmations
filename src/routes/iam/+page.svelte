@@ -6,6 +6,7 @@
 
   // Handle recorded audio from RecordAudio component
   const handleRecording = (audioBlob) => {
+    console.log("Recorded audio blob:", audioBlob); // Debugging log
     recordedAudioBlob = new File([audioBlob], "recorded_audio.m4a", {
       type: "audio/m4a",
     });
@@ -16,9 +17,11 @@
 
     if (recordedAudioBlob) {
       // If there's a recorded audio, send that
+      console.log("Sending recorded audio..."); // Debugging log
       formData.append("recordedAudio", recordedAudioBlob);
     } else if (selectedFile) {
       // Otherwise, use the uploaded file
+      console.log("Sending selected file..."); // Debugging log
       formData.append("file", selectedFile);
     } else {
       console.error("No file selected or recorded.");

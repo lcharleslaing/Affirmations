@@ -32,9 +32,9 @@ const mixWithBackgroundMusic = async (convertedFilePath, backgroundMusicPath, te
       .input(convertedFilePath) // Input the already converted file
       .input(backgroundMusicPath) // Background music
       .complexFilter([
-        '[0]volume=4dB,aresample=44100[a]', // Boost volume of main audio
+        '[0]volume=4dB,aresample=44100[a]', // Boost volume of main audio (recorded audio)
         '[1]aloop=loop=-1:size=2e+09,volume=-4dB,aresample=44100[b]', // Loop background music
-        '[a][b]amix=inputs=2:duration=first', // Mix both audio tracks
+        '[a][b]amix=inputs=2:duration=shortest', // Mix both audio tracks, shortest to avoid timing issues
       ])
       .on('end', async () => {
         // After mixing, move the mixed temp file to the final output location
@@ -50,49 +50,41 @@ export const POST = async ({ request }) => {
   try {
     const data = await request.formData();
     const uploadedAudioFile = data.get('file'); // Uploaded file (optional)
-    const selectedAudioFilePath = data.get('selectedFilePath'); // Path of an existing file (optional)
     const recordedAudio = data.get('recordedAudio'); // Audio recorded via the app (optional)
-    let audioFileName = ''; // To store the original file name
-    let fileExtension = '.m4a'; // Default extension for output files
-
-    const timestamp = new Date().toISOString().replace(/:/g, '-'); // For appending to the filenames
+    const title = data.get('title');
+    const artist = data.get('artist');
+    let audioFileName = ''; // Filename prefix
 
     // Path to background music
     const backgroundMusicPath = path.normalize('E:/MyComposedSongs/00-AFFIRMATIONS/family.mp3');
 
-    // Ensure the output directory exists
+    // Filename generation
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
     const directory = path.normalize('C:/Users/lchar/Downloads/NewAffirmations');
+
+    // Ensure the directory exists
     if (!fs.existsSync(directory)) {
       fs.mkdirSync(directory, { recursive: true });
     }
 
-    let audioFilePath; // Path of the input audio file
+    let audioFilePath; // Path of the audio file
 
     if (uploadedAudioFile) {
-      // Extract the base name (without extension) from the uploaded file
+      // Use the uploaded file's original name (without extension) as the prefix
       audioFileName = path.basename(uploadedAudioFile.name, path.extname(uploadedAudioFile.name));
-      fileExtension = path.extname(uploadedAudioFile.name);
+      const rawFilePath = path.join(directory, `${audioFileName}-raw-${timestamp}.m4a`);
 
-      // Save the uploaded file to the raw file
-      const rawFilePath = path.join(directory, `${audioFileName}-raw-${timestamp}${fileExtension}`);
+      // Handle uploaded audio file
       const arrayBuffer = await uploadedAudioFile.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       fs.writeFileSync(rawFilePath, buffer);
       audioFilePath = rawFilePath;
-    } else if (selectedAudioFilePath) {
-      // Extract the base name from the selected file path
-      audioFileName = path.basename(selectedAudioFilePath, path.extname(selectedAudioFilePath));
-      fileExtension = path.extname(selectedAudioFilePath);
-
-      // Use the selected file directly as the input
-      audioFilePath = selectedAudioFilePath;
     } else if (recordedAudio) {
-      // For recorded audio, generate a default file name
+      // Use "recorded-audio" as the prefix for recorded audio
       audioFileName = 'recorded-audio';
-      fileExtension = '.m4a'; // Default extension for recorded files
+      const rawFilePath = path.join(directory, `${audioFileName}-raw-${timestamp}.m4a`);
 
-      // Save the recorded audio to the raw file
-      const rawFilePath = path.join(directory, `${audioFileName}-raw-${timestamp}${fileExtension}`);
+      // Handle recorded audio
       const arrayBuffer = await recordedAudio.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       fs.writeFileSync(rawFilePath, buffer);
@@ -101,12 +93,12 @@ export const POST = async ({ request }) => {
       throw new Error('No audio file provided');
     }
 
-    // Define filenames for the conversion and mixing steps
-    const convertedFilePath = path.join(directory, `${audioFileName}-converted-${timestamp}${fileExtension}`); // Converted audio
-    const tempMixedFilePath = path.join(directory, `${audioFileName}-temp-mixed-${timestamp}${fileExtension}`); // Temporary mixed file
-    const finalFilePath = path.join(directory, `${audioFileName}-final-${timestamp}${fileExtension}`); // Final output
+    // Paths for converted and final mixed files
+    const convertedFilePath = path.join(directory, `${audioFileName}-converted-${timestamp}.m4a`); // Converted audio
+    const tempMixedFilePath = path.join(directory, `${audioFileName}-temp-mixed-${timestamp}.m4a`); // Temporary mixed file
+    const finalFilePath = path.join(directory, `${audioFileName}-final-${timestamp}.m4a`); // Final output
 
-    // Convert the file to Apple Music-compatible format
+    // Convert to Apple Music-compatible format
     console.log('Converting to Apple Music compatible format...');
     await convertToAppleMusicFormat(audioFilePath, convertedFilePath);
 
@@ -119,11 +111,9 @@ export const POST = async ({ request }) => {
     console.log('Mixing with background music...');
     await mixWithBackgroundMusic(convertedFilePath, backgroundMusicPath, tempMixedFilePath, finalFilePath);
 
-    // Cleanup: remove intermediate files
-    if (uploadedAudioFile || recordedAudio) {
-      await unlinkAsync(audioFilePath); // Remove raw file after conversion
-    }
-    await unlinkAsync(convertedFilePath); // Remove converted file after mixing
+    // Cleanup
+    await unlinkAsync(audioFilePath); // Remove raw file after processing
+    await unlinkAsync(convertedFilePath); // Remove the intermediate converted file
 
     console.log('File saved successfully with background music');
     return new Response('File saved successfully with background music and proper format');
