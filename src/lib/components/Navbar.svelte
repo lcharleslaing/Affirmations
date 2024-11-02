@@ -49,6 +49,14 @@
       iconPath: "", // Add a real path here if necessary
     }, // Always visible
     {
+      name: "Affirmations",
+      href: "/affirmations",
+      active: false,
+      visible: true,
+      icon: true,
+      iconPath: "", // Add a real path here if necessary
+    }, // Always visible
+    {
       name: "Login",
       href: "/login",
       active: false,

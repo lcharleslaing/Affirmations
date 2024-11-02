@@ -1,0 +1,789 @@
+I have a sveltekit project base that I will share with you when we start but I want a plan for this app that does the following:
+
+The name of the app will be "Affirmation Creator"
+
+it will do the following:
+
+- Have the ability to do any of the following tasks individually:
+
+1) Upload Audio affirmation, then adds chosen background music to it that matches the length of the audio file, sets the meta data for Apple music, then adds it to my apple music account so that it shows up in my music when I open the apple music app.
+2) Record audio affirmation within this app with full controls that include Record, Pause, Resume, and End Recording, then adds chosen background music to it that matches the length of the audio file, sets the meta data for Apple music, then adds it to my apple music account so that it shows up in my music when I open the apple music app.
+3) Textarea that I can write the transcript for my affirmations I want to record within this app and in this section, when I have the text written and Press record, a teleprompter opens and runs, and scrolls so I can record it live, then adds chosen background music to it that matches the length of the audio file, sets the meta data for Apple music, then adds it to my apple music account so that it shows up in my music when I open the apple music app.
+
+Put a plan together for this and how we can make this automatically work with apple music integration as I am currently doing it manually through the Apple Music app.
+
+Include a playlist of all recorded affirmations from this app.  They need to be able to be played by random order, the order created or by category.
+
+Here is my project code.  The "affirmations" route is the app I want to develop with this:
+
+File: F:\sveltekit_projects\Affirmations\src\routes\+layout.svelte
+<script>import "../app.css";
+import Navbar from "../lib/components/Navbar.svelte";</script>
+
+<Navbar></Navbar>
+<slot></slot>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\+page.svelte
+<script>
+</script>
+
+<!-- Main Hero Section -->
+<div class="hero min-h-screen bg-base-200">
+  <div class="hero-content text-center">
+    <div class="max-w-lg">
+      <h1 class="text-5xl font-bold">Affirmations</h1>
+      <p class="py-6 text-lg">
+        Welcome to your app that is all about affirmations and living the life
+        that you desire to live, not the one that you have been living.
+      </p>
+    </div>
+  </div>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\affirmations\+page.svelte
+<script>
+</script>
+
+<div class="m-6">
+  <h1 class="text-4xl text-center font-black">Affirmations Page</h1>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\iam\+page.svelte
+<script>
+  import RecordAudio from "$lib/components/iam/RecordAudio.svelte";
+
+  let selectedFile = null; // Stores either uploaded or selected file
+  let recordedAudioBlob = null; // Stores the recorded audio
+
+  // Handle recorded audio from RecordAudio component
+  const handleRecording = (audioBlob) => {
+    console.log("Recorded audio blob:", audioBlob); // Debugging log
+    recordedAudioBlob = new File([audioBlob], "recorded_audio.m4a", {
+      type: "audio/m4a",
+    });
+  };
+
+  const handleUpload = async () => {
+    const formData = new FormData();
+
+    if (recordedAudioBlob) {
+      // If there's a recorded audio, send that
+      console.log("Sending recorded audio..."); // Debugging log
+      formData.append("recordedAudio", recordedAudioBlob);
+    } else if (selectedFile) {
+      // Otherwise, use the uploaded file
+      console.log("Sending selected file..."); // Debugging log
+      formData.append("file", selectedFile);
+    } else {
+      console.error("No file selected or recorded.");
+      return;
+    }
+
+    formData.append("title", "Your Title");
+    formData.append("artist", "Your Artist");
+
+    try {
+      const response = await fetch("/iam", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.text();
+      console.log(result);
+    } catch (error) {
+      console.error("Upload failed", error);
+    }
+  };
+</script>
+
+<div class="">
+  <h1 class="text-4xl text-center font-black my-4">Record or Upload Audio</h1>
+
+  <!-- Record audio directly in the app -->
+  <RecordAudio on:audioRecorded={handleRecording} />
+
+  <div
+    class="mt-4 p-8 space-y-6 bg-base-200 rounded-lg shadow-md max-w-xl mx-auto"
+  >
+    <h1 class="text-3xl font-bold text-center">Upload Your Recording</h1>
+
+    <div class="flex justify-center items-center my-6">
+      <!-- Or upload/select an audio file -->
+      <input
+        type="file"
+        accept="audio/*"
+        on:change={(e) => (selectedFile = e.target.files[0])}
+      />
+
+      <button class="btn btn-primary" on:click={handleUpload}>Submit</button>
+    </div>
+  </div>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\iam\+server.js
+import fs from 'fs';
+import path from 'path';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegStatic from 'ffmpeg-static';
+import ffprobeStatic from 'ffprobe-static';
+import { promisify } from 'util';
+
+const unlinkAsync = promisify(fs.unlink);
+
+ffmpeg.setFfmpegPath(ffmpegStatic);
+ffmpeg.setFfprobePath(ffprobeStatic.path);
+
+// Function to convert audio to Apple Music-compatible format
+const convertToAppleMusicFormat = async (inputFilePath, outputFilePath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputFilePath)
+      .output(outputFilePath)
+      .audioCodec('aac') // Set to AAC
+      .audioBitrate('128k') // Standard bitrate for Apple Music
+      .audioChannels(2) // Stereo
+      .audioFrequency(44100) // 44.1kHz sample rate
+      .on('end', () => resolve())
+      .on('error', (err) => reject(err))
+      .run();
+  });
+};
+
+// Function to mix audio with background music
+const mixWithBackgroundMusic = async (convertedFilePath, backgroundMusicPath, tempMixedFilePath, finalFilePath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(convertedFilePath) // Input the already converted file
+      .input(backgroundMusicPath) // Background music
+      .complexFilter([
+        '[0]volume=4dB,aresample=44100[a]', // Boost volume of main audio (recorded audio)
+        '[1]aloop=loop=-1:size=2e+09,volume=-4dB,aresample=44100[b]', // Loop background music
+        '[a][b]amix=inputs=2:duration=shortest', // Mix both audio tracks, shortest to avoid timing issues
+      ])
+      .on('end', async () => {
+        // After mixing, move the mixed temp file to the final output location
+        fs.renameSync(tempMixedFilePath, finalFilePath);
+        resolve();
+      })
+      .on('error', reject)
+      .save(tempMixedFilePath); // Save to temporary mixed file
+  });
+};
+
+export const POST = async ({ request }) => {
+  try {
+    const data = await request.formData();
+    const uploadedAudioFile = data.get('file'); // Uploaded file (optional)
+    const recordedAudio = data.get('recordedAudio'); // Audio recorded via the app (optional)
+    const title = data.get('title');
+    const artist = data.get('artist');
+    let audioFileName = ''; // Filename prefix
+
+    // Path to background music
+    const backgroundMusicPath = path.normalize('E:/MyComposedSongs/00-AFFIRMATIONS/family.mp3');
+
+    // Filename generation
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const directory = path.normalize('C:/Users/lchar/Downloads/NewAffirmations');
+
+    // Ensure the directory exists
+    if (!fs.existsSync(directory)) {
+      fs.mkdirSync(directory, { recursive: true });
+    }
+
+    let audioFilePath; // Path of the audio file
+
+    if (uploadedAudioFile) {
+      // Use the uploaded file's original name (without extension) as the prefix
+      audioFileName = path.basename(uploadedAudioFile.name, path.extname(uploadedAudioFile.name));
+      const rawFilePath = path.join(directory, `${audioFileName}-raw-${timestamp}.m4a`);
+
+      // Handle uploaded audio file
+      const arrayBuffer = await uploadedAudioFile.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      fs.writeFileSync(rawFilePath, buffer);
+      audioFilePath = rawFilePath;
+    } else if (recordedAudio) {
+      // Use "recorded-audio" as the prefix for recorded audio
+      audioFileName = 'recorded-audio';
+      const rawFilePath = path.join(directory, `${audioFileName}-raw-${timestamp}.m4a`);
+
+      // Handle recorded audio
+      const arrayBuffer = await recordedAudio.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      fs.writeFileSync(rawFilePath, buffer);
+      audioFilePath = rawFilePath;
+    } else {
+      throw new Error('No audio file provided');
+    }
+
+    // Paths for converted and final mixed files
+    const convertedFilePath = path.join(directory, `${audioFileName}-converted-${timestamp}.m4a`); // Converted audio
+    const tempMixedFilePath = path.join(directory, `${audioFileName}-temp-mixed-${timestamp}.m4a`); // Temporary mixed file
+    const finalFilePath = path.join(directory, `${audioFileName}-final-${timestamp}.m4a`); // Final output
+
+    // Convert to Apple Music-compatible format
+    console.log('Converting to Apple Music compatible format...');
+    await convertToAppleMusicFormat(audioFilePath, convertedFilePath);
+
+    // Verify background music exists
+    if (!fs.existsSync(backgroundMusicPath)) {
+      throw new Error(`Background music file not found: ${backgroundMusicPath}`);
+    }
+
+    // Mix the converted audio with background music
+    console.log('Mixing with background music...');
+    await mixWithBackgroundMusic(convertedFilePath, backgroundMusicPath, tempMixedFilePath, finalFilePath);
+
+    // Cleanup
+    await unlinkAsync(audioFilePath); // Remove raw file after processing
+    await unlinkAsync(convertedFilePath); // Remove the intermediate converted file
+
+    console.log('File saved successfully with background music');
+    return new Response('File saved successfully with background music and proper format');
+  } catch (error) {
+    console.error('Error processing file:', error.message);
+    return new Response(`Error: ${error.message}`, { status: 500 });
+  }
+};
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\login\+page.svelte
+<script>
+  let username = "";
+  let password = "";
+  let errorMessage = "";
+  let successMessage = "";
+
+  // Function to handle login
+  function login() {
+    errorMessage = ""; // Reset any previous error message
+
+    // Retrieve users array from localStorage, or initialize it as an empty array
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+
+    // Check if a user with the entered username exists and if the password matches
+    const foundUser = users.find(
+      (user) => user.username === username && user.password === password
+    );
+
+    if (foundUser) {
+      // Save login status and username to localStorage
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("username", username); // Save username to localStorage
+
+      successMessage = "Login successful! Redirecting...";
+
+      setTimeout(() => {
+        window.location.href = "/"; // Redirect to the homepage
+      }, 2000); // 2-second delay before redirect
+    } else {
+      errorMessage = "Invalid username or password";
+    }
+  }
+</script>
+
+<!-- DaisyUI Toast Container -->
+<div aria-live="polite" class="toast toast-top toast-center z-50">
+  {#if successMessage}
+    <div class="alert alert-success">
+      <div>
+        <span>{successMessage}</span>
+      </div>
+    </div>
+  {/if}
+  {#if errorMessage}
+    <div class="alert alert-error">
+      <div>
+        <span>{errorMessage}</span>
+      </div>
+    </div>
+  {/if}
+</div>
+
+<!-- Login Form -->
+<div class="flex justify-center items-center min-h-screen">
+  <div class="card w-full max-w-sm">
+    <div class="card-body">
+      <h2 class="text-center text-2xl font-bold mb-6">Login</h2>
+
+      <form on:submit|preventDefault={login}>
+        <div class="form-control mb-4">
+          <label for="username" class="label">
+            <span class="label-text">Username</span>
+          </label>
+          <input
+            id="username"
+            type="text"
+            placeholder="Enter your username"
+            bind:value={username}
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <div class="form-control mb-6">
+          <label for="password" class="label">
+            <span class="label-text">Password</span>
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            bind:value={password}
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <div class="form-control">
+          <button type="submit" class="btn btn-primary w-full">Login</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\routes\register\+page.svelte
+<script>
+  let username = "";
+  let password = "";
+  let errorMessage = "";
+  let successMessage = "";
+
+  // Function to handle user registration
+  function register() {
+    errorMessage = ""; // Reset any previous error message
+
+    // Check if username and password are provided
+    if (!username || !password) {
+      errorMessage = "Username and password are required";
+      return;
+    }
+
+    // Retrieve the users array from localStorage, or initialize an empty array
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+
+    // Check if the username already exists in the array of users
+    const userExists = users.some((user) => user.username === username);
+    if (userExists) {
+      errorMessage = "User is already registered";
+      return;
+    }
+
+    // Add the new user to the array and store it back in localStorage
+    users.push({ username, password });
+    localStorage.setItem("users", JSON.stringify(users));
+
+    // Show a success message using a DaisyUI toast
+    successMessage = "Registration successful! Redirecting to login...";
+
+    // Show the toast for a few seconds, then redirect to the login page
+    setTimeout(() => {
+      window.location.href = "/login"; // Redirect to the login page
+    }, 2000); // 2-second delay before redirect
+  }
+</script>
+
+<!-- DaisyUI Toast Container -->
+<div aria-live="polite" class="toast toast-top toast-center z-50">
+  {#if successMessage}
+    <div class="alert alert-success">
+      <div>
+        <span>{successMessage}</span>
+      </div>
+    </div>
+  {/if}
+  {#if errorMessage}
+    <div class="alert alert-error">
+      <div>
+        <span>{errorMessage}</span>
+      </div>
+    </div>
+  {/if}
+</div>
+
+<!-- Registration Form -->
+<div class="flex justify-center items-center min-h-screen">
+  <div class="card w-full max-w-sm">
+    <div class="card-body">
+      <h2 class="text-center text-2xl font-bold mb-6">Register</h2>
+
+      <form on:submit|preventDefault={register}>
+        <div class="form-control mb-4">
+          <label for="username" class="label">
+            <span class="label-text">Username</span>
+          </label>
+          <input
+            id="username"
+            type="text"
+            placeholder="Enter your username"
+            bind:value={username}
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <div class="form-control mb-6">
+          <label for="password" class="label">
+            <span class="label-text">Password</span>
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            bind:value={password}
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <div class="form-control">
+          <button type="submit" class="btn btn-primary w-full">
+            Register
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\lib\components\iam\RecordAudio.svelte
+<script>
+  let mediaRecorder;
+  let audioChunks = [];
+  let isRecording = false;
+  let audioBlob;
+  let audioURL;
+  let audioTitle = "";
+  let artistName = "";
+  let recordingTime = new Date().toISOString();
+  let isSubmitting = false;
+
+  function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+      isRecording = true;
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(audioChunks, { type: "audio/mp3" });
+        audioURL = URL.createObjectURL(audioBlob);
+        audioChunks = [];
+      };
+    });
+  }
+
+  function stopRecording() {
+    mediaRecorder.stop();
+    isRecording = false;
+  }
+
+  async function submitAudio() {
+    if (!audioBlob || !audioTitle || !artistName) {
+      alert(
+        "Please provide title, artist, and record the audio before submission."
+      );
+      return;
+    }
+
+    isSubmitting = true;
+
+    const formData = new FormData();
+    formData.append("file", audioBlob, `${audioTitle}.mp3`);
+    formData.append("title", audioTitle);
+    formData.append("artist", artistName);
+
+    try {
+      const response = await fetch("/iam", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        alert("File uploaded successfully");
+      } else {
+        alert("Failed to upload file");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error uploading the file.");
+    } finally {
+      isSubmitting = false;
+    }
+  }
+</script>
+
+<div class="p-8 space-y-6 bg-base-200 rounded-lg shadow-md max-w-xl mx-auto">
+  <h1 class="text-3xl font-bold text-center">Record Your Affirmation</h1>
+
+  {#if isRecording}
+    <button class="btn btn-error w-full" on:click={stopRecording}>
+      <i class="fas fa-stop mr-2"></i> Stop Recording
+    </button>
+  {:else}
+    <button class="btn btn-primary w-full" on:click={startRecording}>
+      <i class="fas fa-microphone mr-2"></i> Start Recording
+    </button>
+  {/if}
+
+  {#if audioURL}
+    <div class="space-y-4">
+      <audio controls class="w-full mt-4">
+        <source src={audioURL} type="audio/mp3" />
+        Your browser does not support the audio element.
+      </audio>
+
+      <div class="form-control space-y-2">
+        <label class="label">
+          <span class="label-text">Title</span>
+        </label>
+        <input
+          type="text"
+          placeholder="Enter title"
+          bind:value={audioTitle}
+          class="input input-bordered w-full"
+        />
+      </div>
+
+      <div class="form-control space-y-2">
+        <label class="label">
+          <span class="label-text">Artist</span>
+        </label>
+        <input
+          type="text"
+          placeholder="Enter artist name"
+          bind:value={artistName}
+          class="input input-bordered w-full"
+        />
+      </div>
+
+      <button
+        on:click={submitAudio}
+        class="btn btn-success w-full mt-4"
+        disabled={isSubmitting}
+      >
+        {#if isSubmitting}
+          <i class="fas fa-spinner fa-spin mr-2"></i> Submitting...
+        {:else}
+          <i class="fas fa-upload mr-2"></i> Submit Audio
+        {/if}
+      </button>
+    </div>
+  {/if}
+</div>
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\lib\components\Icon.svelte
+<script>
+  export let iconPath = ""; // Path for the icon
+  export let showIcon = true; // Control whether the icon is displayed or not
+</script>
+
+{#if showIcon}
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    class="h-5 w-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d={iconPath}
+    />
+  </svg>
+{/if}
+
+
+
+==================================================
+
+File: F:\sveltekit_projects\Affirmations\src\lib\components\Navbar.svelte
+<script>
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation"; // SvelteKit's client-side navigation
+
+  let isLoggedIn = false;
+  let isInitialized = false; // To ensure we don't render prematurely
+  let username = ""; // Store the username
+
+  // Client-side check using onMount (runs only on the client, not during SSR)
+  onMount(() => {
+    if (typeof window !== "undefined") {
+      const storedStatus = localStorage.getItem("isLoggedIn");
+      const storedUsername = localStorage.getItem("username"); // Retrieve username from localStorage
+
+      if (storedStatus === "true") {
+        isLoggedIn = true; // User is logged in
+        username = storedUsername; // Set the username
+      } else {
+        goto("/login"); // Redirect to login if not logged in
+      }
+      isInitialized = true; // Indicate that the login check is complete
+    }
+  });
+
+  // Handle logging out (clears the login state and redirects to login)
+  function logout() {
+    localStorage.removeItem("isLoggedIn"); // Clear login state
+    localStorage.removeItem("username"); // Clear the stored username
+    isLoggedIn = false; // Set local state to false
+    goto("/login"); // Redirect to login page
+  }
+
+  // Menu items definition
+  $: menuItems = [
+    {
+      name: "Home",
+      href: "/",
+      active: false,
+      visible: true,
+      icon: true,
+      iconPath: "",
+    }, // Always visible
+    {
+      name: "I AM",
+      href: "/iam",
+      active: false,
+      visible: true,
+      icon: true,
+      iconPath: "", // Add a real path here if necessary
+    }, // Always visible
+    {
+      name: "Affirmations",
+      href: "/affirmations",
+      active: false,
+      visible: true,
+      icon: true,
+      iconPath: "", // Add a real path here if necessary
+    }, // Always visible
+    {
+      name: "Login",
+      href: "/login",
+      active: false,
+      visible: !isLoggedIn,
+      iconPath: "", // No icon here
+    },
+    {
+      name: "Register",
+      href: "/register",
+      active: false,
+      visible: !isLoggedIn,
+      iconPath: "", // No icon here
+    },
+    {
+      name: "Logout",
+      href: "#",
+      active: false,
+      visible: isLoggedIn,
+      onClick: logout,
+      iconPath: "", // No icon here
+    },
+  ];
+
+  // Set active menu item by index
+  function setActive(index) {
+    menuItems = menuItems.map((item, i) => ({
+      ...item,
+      active: i === index, // Set the clicked item as active
+    }));
+  }
+
+  // Set active menu item based on URL
+  function setActiveByUrl(pathname) {
+    menuItems = menuItems.map((item) => ({
+      ...item,
+      active: item.href === pathname, // Set active based on the URL
+    }));
+  }
+</script>
+
+<div class="navbar bg-base-100 sticky top-0 z-50">
+  <a href="/" class="btn btn-ghost text-xl">Affirmations</a>
+
+  {#if isLoggedIn && username}
+    <!-- Move the username to the right using 'ml-auto' -->
+    <div class="ml-auto flex flex-row items-center">
+      <span class="font-bold">{username}</span>
+      <!-- <button on:click={logout} class="btn btn-ghost text-sm">Logout</button> -->
+    </div>
+  {/if}
+</div>
+
+<!-- Only render menu when login status is initialized -->
+{#if isInitialized}
+  <div class="btm-nav">
+    {#each menuItems as item, index}
+      {#if item.visible}
+        <!-- Render only items that are visible based on login status -->
+        <a
+          href={item.href}
+          class={item.active ? "active" : ""}
+          on:click={() => {
+            setActive(index);
+            if (item.onClick) item.onClick(); // Handle logout
+          }}
+        >
+          <!-- Display icon if available -->
+          {#if item.icon && item.iconPath}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d={item.iconPath}
+              />
+            </svg>
+          {/if}
+          <span class="btm-nav-label">{item.name}</span>
+        </a>
+      {/if}
+    {/each}
+  </div>
+{/if}
+
+
+
+==================================================
